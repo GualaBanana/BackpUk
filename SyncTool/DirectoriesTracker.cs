@@ -17,14 +17,14 @@ namespace SyncTool
             get
             {
                 if (_os.Platform == PlatformID.Unix) return @"/";
-                // This is the hardcoded root drive that will be tracked.
+                // This is the hardcoded root drive that will be tracked. Ideally it needs to be retrieved at runtime.
                 return @"D:\";
             }
         }
-        public string GetFileNameRelativeToTrackedRootDirectory(FileInfo file) => file.FullName.Replace(TrackedRootDirectory, String.Empty);
+        public string RelativeToTrackedRootDirectoryNameOf(FileInfo file) => file.FullName.Replace(TrackedRootDirectory, String.Empty);
         // Consider moving it to static `Config` class where will be static method `GetTrackFileFullName` or smth.
         readonly string _trackFileName = "track_info";
-        string TrackFileFullName
+        string TrackingFileFullName
         {
             get
             {
@@ -44,13 +44,13 @@ namespace SyncTool
                 return directories;
             }
         }
-        // Can have potential problems. Also, I believe it prints an extra line for some reason. But I'm not sure.
-        // Change to private after tests.
-        public List<string> ListedDirectories
+        // Can have potential problems.
+        // Rename to express more clearly that its intent is to read directories' names from `TrackingFile`
+        List<string> ListedDirectories
         {
             get
             {
-                using var reader = new StreamReader(TrackFileFullName);
+                using var reader = new StreamReader(TrackingFileFullName);
                 var listedDirectories = new List<string>();
                 while (!reader.EndOfStream) listedDirectories.Add(reader.ReadLine());
                 return listedDirectories;
@@ -64,7 +64,7 @@ namespace SyncTool
         public DirectoriesTracker()
         {
             // Just creates the TrackFile if it doesn't exist already.
-            using var _ = File.AppendText(TrackFileFullName);
+            using var _ = File.AppendText(TrackingFileFullName);
         }
 
         // I'm not sure if the check for unique folders should be added here or not.
@@ -72,7 +72,7 @@ namespace SyncTool
         {
             var topLevelSubdirectories = directory.EnumerateDirectories();
 
-            using (var writer = new StreamWriter(TrackFileFullName, append: true))
+            using (var writer = new StreamWriter(TrackingFileFullName, append: true))
             {
                 writer.WriteLine(directory.FullName);
             }
@@ -100,8 +100,14 @@ namespace SyncTool
                     modifiedDirectoriesList.Remove(dir.FullName);
                 }
             }
-            using var writer = new StreamWriter(TrackFileFullName);
+            using var writer = new StreamWriter(TrackingFileFullName);
             modifiedDirectoriesList.ForEach(dir => writer.WriteLine(dir));
+        }
+        private void WriteToTrackingFile(string content, bool append)
+        // Instantiates StreamWriter on each call so is not efficient in loops, thus not used, yet.
+        {
+            using var writer = new StreamWriter(TrackingFileFullName, append);
+            writer.WriteLine(content);
         }
     }
 }

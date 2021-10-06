@@ -8,6 +8,8 @@ namespace SyncTool
 {
     class Sync
     {
+        // Create static `Config` class that will contain static properties for getting OS dependent config info.
+        // For initializing these fields at the beginning of classes' declarations.
         // Move this OS dependent config logic to a spearate config class that will be responsible for this.
         readonly OperatingSystem _os = Environment.OSVersion;
         string AppFolderName
@@ -26,19 +28,7 @@ namespace SyncTool
                 return $@"C:\users\{Environment.UserName}\{AppFolderName}";
             }
         }
-    // Consider making Cloud a separate class.
-    DirectoryInfo Cloud
-        {
-            get
-            {
-                if (_os.Platform == PlatformID.Unix) return new($@"/etc/{AppFolderName}");
-                // This is the hardcoded root drive that is implied as system drive by default.
-                return new($@"C:\users\{Environment.UserName}\{AppFolderName}\$cloud");
-            }
-        }
-        string GetFileNameRelativeToCloud(FileInfo file) => file.FullName.Replace(Cloud.FullName, String.Empty);
-
-
+        readonly Cloud _cloud;
         readonly DirectoriesTracker _tracker;
         List<FileInfo> CurrentFiles
         {
@@ -50,7 +40,11 @@ namespace SyncTool
                 var currentFiles = new List<FileInfo>();
                 foreach (DirectoryInfo directory in _tracker.Directories)
                 {
-                    currentFiles.AddRange(directory.GetFiles());
+                    try
+                    {
+                        currentFiles.AddRange(directory.GetFiles());
+                    }
+                    catch (Exception) { }
                 }
                 return currentFiles;
             }
@@ -59,9 +53,9 @@ namespace SyncTool
         {
             get
             {
-                var currentFilesRelativeNames = CurrentFiles.Select(file => _tracker.GetFileNameRelativeToTrackedRootDirectory(file));
-                var cloudFilesRelativeNames = Cloud.EnumerateFiles().Select(file => GetFileNameRelativeToCloud(file));
-                return currentFilesRelativeNames.Except(cloudFilesRelativeNames).ToList();
+                var currentFilesRelativeNames = CurrentFiles.Select(file => _tracker.RelativeToTrackedRootDirectoryNameOf(file));
+                return currentFilesRelativeNames.Except(_cloud.RelativeFileNames).ToList();
+                //return _cloud.RelativeFileNames.ToList();
             }
         }
 
@@ -69,6 +63,7 @@ namespace SyncTool
         public Sync()
         {
             Directory.CreateDirectory(AppFolderFullName);
+            _cloud = new();
             _tracker = new();
         }
 
@@ -86,7 +81,17 @@ namespace SyncTool
         //    }
         //}
 
+        // This provided `directory` needs to be checked somewhere (most likely somewhere higher in abstraction, even before calling 
+        // `SyncTool` methods. Yeah, like when you are looking at options of a directory on your phone. If the directory is already 
+        // being tracked, than there is no such option as to `StartTracking`. Same here. `StartTracking` mustn't be called with invalid
+        // arguments as it doesn't perform any checks, this is not its responsibility.
 
+        // I think they should take `DirectoryInfo` instances instead of strings. Will see later.
+        public void StartTracking(IEnumerable<string> directories)
+        {
+            foreach (var directory in directories) StartTracking(directory);
+        }
+        public void StartTracking(string directory) => _tracker.Add(new(directory));
         public void Synchronize()
         {
             
