@@ -40,11 +40,26 @@ namespace SyncTool
                 var currentFiles = new List<FileInfo>();
                 foreach (DirectoryInfo directory in _tracker.Directories)
                 {
+                    // Add options when dealing with the deleted directory that is still tracked by `track_info`:
+                    //  - create the folder with this name from the list that refers to non-existent directory now
+                    //  - remove the directory name from the list (stop tracking)
+
+                    // As the directory being tracked and listed in `track_info` file might be deleted
+                    // from the drive but not removed from this tracking list, catch `DirectoryNotFoundException`
+                    // and do remove this directory from the list.
                     try
                     {
-                        currentFiles.AddRange(directory.GetFiles());
+                        currentFiles.AddRange(directory.EnumerateFiles());
                     }
-                    catch (Exception) { }
+                    catch (DirectoryNotFoundException exception)
+                    {
+                        var message = exception.Message;
+                        var from = message.IndexOf('\'') + 1;
+                        var length = message.LastIndexOf('\'') - from;    // It's always the ending quote.
+                        var deletedDirectory = new DirectoryInfo(message.Substring(from, length));
+
+                        _tracker.Remove(deletedDirectory);
+                    }
                 }
                 return currentFiles;
             }

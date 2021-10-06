@@ -52,7 +52,8 @@ namespace SyncTool
             {
                 using var reader = new StreamReader(TrackingFileFullName);
                 var listedDirectories = new List<string>();
-                while (!reader.EndOfStream) listedDirectories.Add(reader.ReadLine());
+                string? line;
+                while ((line = reader.ReadLine()) != null) listedDirectories.Add(line);
                 return listedDirectories;
             }
         }
