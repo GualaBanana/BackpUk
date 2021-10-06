@@ -64,13 +64,14 @@ namespace SyncTool
                 return currentFiles;
             }
         }
-        List<string> NewFiles
+        List<FileInfo> NewFiles
         {
             get
             {
-                var currentFilesRelativeNames = CurrentFiles.Select(file => _tracker.RelativeToTrackedRootDirectoryNameOf(file));
-                return currentFilesRelativeNames.Except(_cloud.RelativeFileNames).ToList();
-                //return _cloud.RelativeFileNames.ToList();
+                var currentFilesRelativeNames = CurrentFiles.Select(file => _tracker.RelativeNameOf(file));
+
+                var newFilesRelativeNames = currentFilesRelativeNames.Except(_cloud.RelativeFileNames);
+                return newFilesRelativeNames.Select(fileName => new FileInfo(_tracker.FullPathFromRelative(fileName))).ToList();
             }
         }
 
@@ -83,7 +84,7 @@ namespace SyncTool
         }
 
 
-        public void ShowNewFiles() => NewFiles.ForEach(file => Console.WriteLine(file));
+        public void ShowNewFiles() => NewFiles.ForEach(file => Console.WriteLine(file.FullName));
         //List<string> NewDirectories
         //{
         //    get
@@ -96,20 +97,47 @@ namespace SyncTool
         //    }
         //}
 
-        // This provided `directory` needs to be checked somewhere (most likely somewhere higher in abstraction, even before calling 
-        // `SyncTool` methods. Yeah, like when you are looking at options of a directory on your phone. If the directory is already 
-        // being tracked, than there is no such option as to `StartTracking`. Same here. `StartTracking` mustn't be called with invalid
-        // arguments as it doesn't perform any checks, this is not its responsibility.
-
-        // I think they should take `DirectoryInfo` instances instead of strings. Will see later.
-        public void StartTracking(IEnumerable<string> directories)
-        {
-            foreach (var directory in directories) StartTracking(directory);
-        }
-        public void StartTracking(string directory) => _tracker.Add(new(directory));
+        /// <summary>
+        /// <paramref name="directory"/> needs to be checked/valid when passed to this method.
+        /// </summary>
+        /// <remarks>
+        /// If <paramref name="directory"/> is already being tracked (invalid), than this method
+        /// must not be called with this argument, as the method doesn't perform any checks itself.
+        /// </remarks>
+        /// <param name="directory">directory to add to the tracking system of the <see cref="Sync"/>.</param>
+        public void StartTracking(DirectoryInfo directory) => _tracker.Add(directory);
+        /// <summary>
+        /// <inheritdoc cref="StartTracking(DirectoryInfo)"/>.
+        /// </summary>
+        /// <remarks>
+        /// Should not be called with the <paramref name="directory"/> that is not tracked as it does nothing in this case.
+        /// </remarks>
+        /// <param name="directory">directory to remove from the tracking system of the <see cref="Sync"/>.</param>
+        public void StopTracking(DirectoryInfo directory) => _tracker.Remove(directory);
+        // After I add the check for directories as well, need to update this method to take it into consideration.
         public void Synchronize()
         {
-            
+            var newFiles = NewFiles;    // Cache while synchronizing.
+            // Placeholder indicator in case there are no new files to sync.
+            if (!newFiles.Any())
+            {
+                Console.WriteLine("All files are in sync.");
+                return;
+            }
+
+            foreach (var file in newFiles)
+            {
+                if (file.DirectoryName != null && file.DirectoryName != Path.GetPathRoot(file.FullName))
+                {
+                    var sourceDirectory = new DirectoryInfo(file.DirectoryName);
+                    var relativeDirectoryName = _tracker.RelativeNameOf(sourceDirectory);
+                    var directoryFullNameOnCloud = _cloud.FullPathFromRelative(relativeDirectoryName);
+                    Directory.CreateDirectory(directoryFullNameOnCloud);
+                }
+
+                var fullFileNameOnCloud = Path.Join(_cloud.Location, _tracker.RelativeNameOf(file));
+                file.CopyTo(fullFileNameOnCloud);
+            }
         }
     }
 }

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 namespace SyncTool
 {
     /// <summary>
-    ///     Manages the file in which the list of directories' names are stored.
+    /// Manages the file in which the list of directories' names are stored.
     /// </summary>
     public class DirectoriesTracker
     {
@@ -21,7 +21,8 @@ namespace SyncTool
                 return @"D:\";
             }
         }
-        public string RelativeToTrackedRootDirectoryNameOf(FileInfo file) => file.FullName.Replace(TrackedRootDirectory, String.Empty);
+        public string RelativeNameOf(FileSystemInfo entry) => Path.GetRelativePath(TrackedRootDirectory, entry.FullName);
+        public string FullPathFromRelative(string relativePath) => Path.Join(TrackedRootDirectory, relativePath);
         // Consider moving it to static `Config` class where will be static method `GetTrackFileFullName` or smth.
         readonly string _trackFileName = "track_info";
         string TrackingFileFullName
@@ -45,7 +46,6 @@ namespace SyncTool
             }
         }
         // Can have potential problems.
-        // Rename to express more clearly that its intent is to read directories' names from `TrackingFile`
         List<string> ListedDirectories
         {
             get
@@ -59,11 +59,12 @@ namespace SyncTool
         }
 
         /// <summary>
-        ///     Initializes the instance of <see cref="DirectoriesTracker"/> that manages the file with directory names.
+        /// Initializes the instance of <see cref="DirectoriesTracker"/> that manages the file with directory names.
         /// </summary>
         /// <param name="fileName"></param>
         public DirectoriesTracker()
         {
+            // It probably can be the culprit of writing of an empty line at the beginning of the file
             // Just creates the TrackFile if it doesn't exist already.
             using var _ = File.AppendText(TrackingFileFullName);
         }
@@ -82,10 +83,11 @@ namespace SyncTool
         // At this moment implementation of `Add` and `Remove` differ. `Add` adds folders recursively
         // calling itself, but `Remove` can do the same but using a flag. So far it doesn't complicate anything.
         /// <summary>
-        ///     Removes provided directory from the list of tracked directories.
+        /// Removes provided directory from the list of tracked directories.
         /// </summary>
         /// <remarks>
-        ///     By default, removes only <paramref name="directory"/>, this behaviour can be changed with <paramref name="recursively"/> flag.
+        /// By default, removes only <paramref name="directory"/>, this behaviour can be changed with <paramref name="recursively"/> flag.<br/>
+        /// Calling with <paramref name="directory"/> that is not tracked (shouldn't be done) already does nothing.
         /// </remarks>
         /// <param name="directory">the directory to remove from list of tracked directories.</param>
         /// <param name="recursively">if <c>true</c> than removes children directories of the <paramref name="directory"/>, <c>false</c>otherwise.</param>

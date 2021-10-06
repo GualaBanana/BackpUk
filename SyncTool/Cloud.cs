@@ -8,7 +8,7 @@ namespace SyncTool
 {
     public class Cloud
     {
-        static string Location
+        public string Location
         {
             get
             {
@@ -16,13 +16,25 @@ namespace SyncTool
                 return $@"C:\users\{Environment.UserName}\.synctool\$cloud\";
             }
         }
-        // Doesn't throw an exception if the directory at the given path doesn't exist so can be initialized upon declaration.
-        readonly DirectoryInfo _cloud = new(Location);
+        readonly DirectoryInfo _cloud;
         public List<string> RelativeFileNames => EnumerateFiles().Select(file => file.FullName.Replace(Location, String.Empty)).ToList();
+        /// <summary>
+        /// <inheritdoc cref="FullPathFromRelative(string)"/>.
+        /// </summary>
+        /// <param name="entry"></param>
+        /// <returns></returns>
+        public string FullPathFromRelative(FileSystemInfo entry) => FullPathFromRelative(entry.FullName);
+        /// <summary>
+        /// Constructs the path inside the <see cref="Cloud"/> from a relative path.
+        /// </summary>
+        /// <param name="relativePath"></param>
+        /// <returns></returns>
+        public string FullPathFromRelative(string relativePath) => Path.Join(Location, relativePath);
 
 
         public Cloud()
         {
+            _cloud = new(Location);
             // Creates the directory at the path stored inside `_cloud` if it doesn't exist already, otherwise does nothing.
             _cloud.Create();
         }
