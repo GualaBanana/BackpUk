@@ -9,11 +9,30 @@ namespace SyncTool
     /// <summary>
     ///     Manages the file in which the list of directories' names are stored.
     /// </summary>
-    public class Tracker
+    public class DirectoriesTracker
     {
-        // SearchOption.AllDirectories.
-        string TrackFileName { get; }
-        List<DirectoryInfo> Directories
+        readonly OperatingSystem _os = Environment.OSVersion;
+        string TrackedRootDirectory
+        {
+            get
+            {
+                if (_os.Platform == PlatformID.Unix) return @"/";
+                // This is the hardcoded root drive that will be tracked.
+                return @"D:\";
+            }
+        }
+        public string GetFileNameRelativeToTrackedRootDirectory(FileInfo file) => file.FullName.Replace(TrackedRootDirectory, String.Empty);
+        // Consider moving it to static `Config` class where will be static method `GetTrackFileFullName` or smth.
+        readonly string _trackFileName = "track_info";
+        string TrackFileFullName
+        {
+            get
+            {
+                if (_os.Platform == PlatformID.Unix) return @$"/etc/synctool/{_trackFileName}";
+                return @$"C:\users\{Environment.UserName}\.synctool\{_trackFileName}";
+            }
+        }
+        public List<DirectoryInfo> Directories
         {
             get
             {
@@ -31,7 +50,7 @@ namespace SyncTool
         {
             get
             {
-                using var reader = new StreamReader(TrackFileName);
+                using var reader = new StreamReader(TrackFileFullName);
                 var listedDirectories = new List<string>();
                 while (!reader.EndOfStream) listedDirectories.Add(reader.ReadLine());
                 return listedDirectories;
@@ -39,14 +58,13 @@ namespace SyncTool
         }
 
         /// <summary>
-        ///     Initializes the instance of <see cref="Tracker"/> that manages the file with directory names.
+        ///     Initializes the instance of <see cref="DirectoriesTracker"/> that manages the file with directory names.
         /// </summary>
         /// <param name="fileName"></param>
-        public Tracker(string fileName)
+        public DirectoriesTracker()
         {
-            TrackFileName = fileName;
             // Just creates the TrackFile if it doesn't exist already.
-            using var _ = File.AppendText(TrackFileName);
+            using var _ = File.AppendText(TrackFileFullName);
         }
 
         // I'm not sure if the check for unique folders should be added here or not.
@@ -54,7 +72,7 @@ namespace SyncTool
         {
             var topLevelSubdirectories = directory.EnumerateDirectories();
 
-            using (var writer = new StreamWriter(TrackFileName, append: true))
+            using (var writer = new StreamWriter(TrackFileFullName, append: true))
             {
                 writer.WriteLine(directory.FullName);
             }
@@ -82,7 +100,7 @@ namespace SyncTool
                     modifiedDirectoriesList.Remove(dir.FullName);
                 }
             }
-            using var writer = new StreamWriter(TrackFileName);
+            using var writer = new StreamWriter(TrackFileFullName);
             modifiedDirectoriesList.ForEach(dir => writer.WriteLine(dir));
         }
     }
