@@ -1,50 +1,35 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace SyncTool
+﻿namespace SyncTool
 {
     class Sync
     {
-        // Create static `Config` class that will contain static properties for getting OS dependent config info.
-        // For initializing these fields at the beginning of classes' declarations.
-        // Move this OS dependent config logic to a spearate config class that will be responsible for this.
-        readonly OperatingSystem _os = Environment.OSVersion;
-        string AppFolderName
-        {
-            get
-            {
-                if (_os.Platform == PlatformID.Unix) return "synctool";
-                return ".synctool";
-            }
-        }
-        string AppFolderFullName
-        {
-            get
-            {
-                if (_os.Platform == PlatformID.Unix) return $@"/etc/{AppFolderName}";
-                return $@"C:\users\{Environment.UserName}\{AppFolderName}";
-            }
-        }
         readonly Cloud _cloud;
         readonly DirectoriesTracker _tracker;
+
+        /// <summary>
+        /// <see cref="List{T}"/> of directories' names that are already being tracked by the app.
+        /// </summary>
+        public List<string> AlreadyTracked => _tracker.TrackList;
         List<FileInfo> CurrentFiles
         {
+
             // Enumerate all files in each tracked directory.
             // I don't need to enumerate them with `SearchOption.AllDirectories`
             // as each directory that is tracked will be enumerated anyway.
             get
             {
+                // Part of the contract I want to implement:
+                // It's actually the same as in `DirectoriesTracker.Add()` method. I think they both can be made more generic.
+                if (!AlreadyTracked.Any())
+                    throw new InvalidOperationException("Methods that require directories names from `TrackLisk` to function can not be called with the empty `TrackList`.");
+
                 var currentFiles = new List<FileInfo>();
                 foreach (DirectoryInfo directory in _tracker.Directories)
                 {
-                    // Add options when dealing with the deleted directory that is still tracked by `track_info`:
+                    // Add options when dealing with the deleted directory that is still tracked by `track_list`:
                     //  - create the folder with this name from the list that refers to non-existent directory now
                     //  - remove the directory name from the list (stop tracking)
 
-                    // As the directory being tracked and listed in `track_info` file might be deleted
+                    // As the directory being tracked and listed in `track_list` file might be deleted
                     // from the drive but not removed from this tracking list, catch `DirectoryNotFoundException`
                     // and do remove this directory from the list.
                     try
@@ -68,7 +53,12 @@ namespace SyncTool
         {
             get
             {
-                var currentFilesRelativeNames = CurrentFiles.Select(file => _tracker.RelativeNameOf(file));
+                // `CurrentFiles` breaks in case `_tracker.TrackList` contains directories from another drive.
+                // Like if upon running the app user chose logic drive "C:\" but directories being tracked in
+                // `TrackList` are the ones from drive "D:\" so `_tracker.RelativeName` works improperly and
+                // call to `Path.GetRelativePath(RootDirectoryToTrack, fullPath)` results in the same `fullPath`
+                // as this method cuts off nothing because `RootDirectoryToTrack` is not the part of `fullPath`.
+                var currentFilesRelativeNames = CurrentFiles.Select(file => _tracker.RelativeName(file.FullName));
 
                 var newFilesRelativeNames = currentFilesRelativeNames.Except(_cloud.RelativeFileNames);
                 return newFilesRelativeNames.Select(fileName => new FileInfo(_tracker.FullPathFromRelative(fileName))).ToList();
@@ -78,7 +68,8 @@ namespace SyncTool
 
         public Sync()
         {
-            Directory.CreateDirectory(AppFolderFullName);
+            // Dictates the order of components' initialization.
+            Directory.CreateDirectory(Config.InstallationPath);
             _cloud = new();
             _tracker = new();
         }
@@ -114,11 +105,14 @@ namespace SyncTool
         /// </remarks>
         /// <param name="directory">directory to remove from the tracking system of the <see cref="Sync"/>.</param>
         public void StopTracking(DirectoryInfo directory) => _tracker.Remove(directory);
+        // Make event that is raised when synchronization is completed. Fosho!
+
         // After I add the check for directories as well, need to update this method to take it into consideration.
         public void Synchronize()
         {
             var newFiles = NewFiles;    // Cache while synchronizing.
-            // Placeholder indicator in case there are no new files to sync.
+            // Placeholder indicator in case there are no new files to sync. Should be substituted with raising of the event later
+            // when the event is ready. Maybe for now should consider using preprocessor directive to optionally compile foreach statement.
             if (!newFiles.Any())
             {
                 Console.WriteLine("All files are in sync.");
@@ -130,12 +124,13 @@ namespace SyncTool
                 if (file.DirectoryName != null && file.DirectoryName != Path.GetPathRoot(file.FullName))
                 {
                     var sourceDirectory = new DirectoryInfo(file.DirectoryName);
-                    var relativeDirectoryName = _tracker.RelativeNameOf(sourceDirectory);
+                    var relativeDirectoryName = _tracker.RelativeName(sourceDirectory.FullName);
                     var directoryFullNameOnCloud = _cloud.FullPathFromRelative(relativeDirectoryName);
                     Directory.CreateDirectory(directoryFullNameOnCloud);
                 }
 
-                var fullFileNameOnCloud = Path.Join(_cloud.Location, _tracker.RelativeNameOf(file));
+                var fileRelativeName = _tracker.RelativeName(file.FullName);
+                var fullFileNameOnCloud = _cloud.FullPathFromRelative(fileRelativeName);
                 file.CopyTo(fullFileNameOnCloud);
             }
         }

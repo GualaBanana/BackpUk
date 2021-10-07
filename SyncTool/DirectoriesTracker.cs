@@ -1,80 +1,79 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace SyncTool
+﻿namespace SyncTool
 {
     /// <summary>
     /// Manages the file in which the list of directories' names are stored.
     /// </summary>
-    public class DirectoriesTracker
+    public class DirectoriesTracker : ISystemComponent
     {
-        readonly OperatingSystem _os = Environment.OSVersion;
-        string TrackedRootDirectory
-        {
-            get
-            {
-                if (_os.Platform == PlatformID.Unix) return @"/";
-                // This is the hardcoded root drive that will be tracked. Ideally it needs to be retrieved at runtime.
-                return @"D:\";
-            }
-        }
-        public string RelativeNameOf(FileSystemInfo entry) => Path.GetRelativePath(TrackedRootDirectory, entry.FullName);
-        public string FullPathFromRelative(string relativePath) => Path.Join(TrackedRootDirectory, relativePath);
-        // Consider moving it to static `Config` class where will be static method `GetTrackFileFullName` or smth.
-        readonly string _trackFileName = "track_info";
-        string TrackingFileFullName
-        {
-            get
-            {
-                if (_os.Platform == PlatformID.Unix) return @$"/etc/synctool/{_trackFileName}";
-                return @$"C:\users\{Environment.UserName}\.synctool\{_trackFileName}";
-            }
-        }
+        readonly TrackerConfig _config = new();
+
+        public string RootDirectoryToTrack { get; } = @"D:\";  // Config.AskToChooseLogicalDrive();
+
+        public string FullPathFromRelative(string relativePath) => Path.Join(RootDirectoryToTrack, relativePath);
+        public string RelativeName(string fullPath) => Path.GetRelativePath(RootDirectoryToTrack, fullPath);
+
         public List<DirectoryInfo> Directories
         {
             get
             {
                 var directories = new List<DirectoryInfo>();
-                foreach (string directoryName in ListedDirectories)
+                foreach (string directoryName in TrackList)
                 {
                     directories.Add(new(directoryName));
                 }
                 return directories;
             }
         }
-        // Can have potential problems.
-        List<string> ListedDirectories
+        // It's public because `Add` method requires arguments that were checked before passing them to `Add`.
+        // For users of the `Sync` to be able to check the arguments they provide, they need to have the list
+        // of already tracked directories, i.e. `ListedDirectories`.
+        public List<string> TrackList
         {
             get
             {
-                using var reader = new StreamReader(TrackingFileFullName);
-                var listedDirectories = new List<string>();
+                using var reader = new StreamReader(_config.ComponentLocationPath);
+                var trackListFileContents = new List<string>();
                 string? line;
-                while ((line = reader.ReadLine()) != null) listedDirectories.Add(line);
-                return listedDirectories;
+                while ((line = reader.ReadLine()) != null && line != String.Empty) trackListFileContents.Add(line);
+                return trackListFileContents;
             }
         }
+
 
         /// <summary>
         /// Initializes the instance of <see cref="DirectoriesTracker"/> that manages the file with directory names.
         /// </summary>
         /// <param name="fileName"></param>
-        public DirectoriesTracker()
-        {
-            // It probably can be the culprit of writing of an empty line at the beginning of the file
-            // Just creates the TrackFile if it doesn't exist already.
-            using var _ = File.AppendText(TrackingFileFullName);
-        }
+        public DirectoriesTracker() { }
 
-        // I'm not sure if the check for unique folders should be added here or not.
+        // TODO:
+        // Add the event for the empty `TrackList` that is raised when no directories are tracked yet.
+        // Users will be able to declare their own subscribers that will execute only when they are subscribed to my event.
+        // E.g. when a gallery app is opened on a phone, the gallery can subscribe to my event to perform
+        // actions when my event is raised. This functionality is the responsiblity of the first if statement in this method for now.
+        // This observer interface just must be an interface that will be called something like "IEmptyTrackListManager
+
+        // Sometimes, when I forget, this method throws:
+        //      `Unhandled exception. System.IO.DirectoryNotFoundException: Could not find a part of the path 'D:\test_source'.`
+        // The reason is that it shouldn't be provided with non-existent directories.
+        // Solution: get rid of any direct/indirect calls to this `Add` method.
         public void Add(DirectoryInfo directory)
         {
+            // Maybe consider creating some kind of `Contract` out of these assertions (or maybe call it `Assert`, make a research on this one as well)
+            // like the `Contract` I saw in C# BCL source code.
+
+            //if (!TrackList.Any())
+            //    throw new NotImplementedException("Implement the Subscriber pattern and " +
+            //        "declare 'I<something_related_to_managing_empty_track_lists_or_just_empty_lists_in_general>'");
+
+            if (!directory.Exists) throw new DirectoryNotFoundException($"The directory that doesn't exist must not be passed to this method: {directory}");
+
+            if (TrackList.Contains(directory.FullName))
+                throw new ArgumentException("Directories that are already tracked can not be added twice. Provide only validated elements");
+
             var topLevelSubdirectories = directory.EnumerateDirectories();
 
-            using (var writer = new StreamWriter(TrackingFileFullName, append: true))
+            using (var writer = new StreamWriter(_config.ComponentLocationPath, append: true))
             {
                 writer.WriteLine(directory.FullName);
             }
@@ -93,7 +92,7 @@ namespace SyncTool
         /// <param name="recursively">if <c>true</c> than removes children directories of the <paramref name="directory"/>, <c>false</c>otherwise.</param>
         public void Remove(DirectoryInfo directory, bool recursively = false)
         {
-            var modifiedDirectoriesList = ListedDirectories;
+            var modifiedDirectoriesList = TrackList;
             modifiedDirectoriesList.Remove(directory.FullName);
             if (recursively)
             {
@@ -103,13 +102,14 @@ namespace SyncTool
                     modifiedDirectoriesList.Remove(dir.FullName);
                 }
             }
-            using var writer = new StreamWriter(TrackingFileFullName);
+            using var writer = new StreamWriter(_config.ComponentLocationPath);
             modifiedDirectoriesList.ForEach(dir => writer.WriteLine(dir));
         }
+
+        [Obsolete("Instantiates StreamWriter on each call so is not efficient in loops, thus not used, yet.")]
         private void WriteToTrackingFile(string content, bool append)
-        // Instantiates StreamWriter on each call so is not efficient in loops, thus not used, yet.
         {
-            using var writer = new StreamWriter(TrackingFileFullName, append);
+            using var writer = new StreamWriter(_config.ComponentLocationPath, append);
             writer.WriteLine(content);
         }
     }

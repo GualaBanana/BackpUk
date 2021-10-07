@@ -1,13 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace SyncTool
+﻿namespace SyncTool
 {
     /// <summary>
-    /// Base abstract class for providing configs to different parts of the system.
+    /// Abstract base class for providing configs to different parts of the system.
     /// </summary>
     /// <remarks>
     /// Provides an easy pluggable functionality by being an abstract class for every concrete <see cref="Config"/><br/>
@@ -15,41 +9,48 @@ namespace SyncTool
     /// </remarks>
     public abstract class Config
     {
-        protected OperatingSystem _os = Environment.OSVersion;
-        protected virtual string AppFolderName { get; } = "synctool";
-        // TODO:
-        // Here need to be properties responsible for paths like `Cloud.Location`, `DirectoriesTracker.TrackedRootDirectory`, etc.
+        static string DirectoryName
+        {
+            get
+            {
+                if (OperatingSystem.IsWindows()) return ".synctool";
+                throw new ArgumentException($"The AppRootDirectoryName is undetermined for the current operating system.", nameof(Environment.OSVersion));
+            }
+        }
+        public static string InstallationPath
+        {
+            get
+            {
+                // Need to change it to determine the root system drive in a provided environment at runtime.
+                if (OperatingSystem.IsWindows()) return $@"C:\users\{Environment.UserName}\{DirectoryName}\";
+                throw new ArgumentException("The InstallationPath is undetermined for the current operating system.", nameof(Environment.OSVersion));
+            }
+        }
 
 
-        // Provide a separate interface for these. Name needs to be related to the classes that perform this functionality.
-        // Like, what's their purpose? Based on the answer, I need to come up with the name for the interface.
-        public abstract string FullPathFromRelative(string relativePath);
-        public abstract string FullPathFromRelative(FileSystemInfo entry);
-        public abstract string RelativeNameOf(string fullPath);
-        public abstract string RelativeNameOf(FileSystemInfo fullPath);
+        protected abstract string ComponentName { get; }
+        public string ComponentLocationPath => Path.Join(InstallationPath, ComponentName);
+        /// <summary>
+        /// Initializes derived types of <see cref="FileSystemInfo"/> in children config classes.
+        /// </summary>
+        public abstract FileSystemInfo FileSystemInfoObject { get; }
     }
 
     public class CloudConfig : Config
     {
-        protected override string AppFolderName => '.' + base.AppFolderName;
-
-        public override string FullPathFromRelative(string relativePath) => throw new NotImplementedException();
-
-        public override string FullPathFromRelative(FileSystemInfo entry)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override string RelativeNameOf(string fullPath)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override string RelativeNameOf(FileSystemInfo fullPath)
-        {
-            throw new NotImplementedException();
-        }
+        protected override string ComponentName { get; } = "$cloud";
+        public override DirectoryInfo FileSystemInfoObject => new(ComponentLocationPath);
     }
 
     public class TrackerConfig : Config
+    {
+        protected override string ComponentName { get; } = "track_list";
+        public override FileInfo FileSystemInfoObject => new(ComponentLocationPath);
+
+
+        public TrackerConfig()
+        {
+            using var _ = File.AppendText(ComponentLocationPath);
+        }
+    }
 }
