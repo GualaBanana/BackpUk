@@ -3,7 +3,7 @@
     /// <summary>
     /// Manages the file in which the list of directories' names are stored.
     /// </summary>
-    public class DirectoriesTracker : ISystemComponent
+    public class DirectoriesTracker : IRelativePathManager
     {
         readonly TrackerConfig _config = new();
 
@@ -12,21 +12,8 @@
         public string FullPathFromRelative(string relativePath) => Path.Join(RootDirectoryToTrack, relativePath);
         public string RelativeName(string fullPath) => Path.GetRelativePath(RootDirectoryToTrack, fullPath);
 
-        public List<DirectoryInfo> Directories
-        {
-            get
-            {
-                var directories = new List<DirectoryInfo>();
-                foreach (string directoryName in TrackList)
-                {
-                    directories.Add(new(directoryName));
-                }
-                return directories;
-            }
-        }
-        // It's public because `Add` method requires arguments that were checked before passing them to `Add`.
-        // For users of the `Sync` to be able to check the arguments they provide, they need to have the list
-        // of already tracked directories, i.e. `ListedDirectories`.
+        public List<DirectoryInfo> Directories => 
+            TrackList.Select(trackedDirectory => new DirectoryInfo(trackedDirectory)).ToList();
         public List<string> TrackList
         {
             get

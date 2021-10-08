@@ -1,6 +1,6 @@
 ﻿namespace SyncTool
 {
-    public class Cloud : ISystemComponent
+    public class Cloud : IRelativePathManager
     {
         readonly CloudConfig _config = new();
         readonly DirectoryInfo _cloud;
