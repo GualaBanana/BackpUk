@@ -52,24 +52,11 @@
         // E.g. when a gallery app is opened on a phone, the gallery can subscribe to my event to perform
         // actions when my event is raised. This functionality is the responsiblity of the first if statement in this method for now.
         // This observer interface just must be an interface that will be called something like "IEmptyTrackListManager
-
-        // Sometimes, when I forget, this method throws:
-        //      `Unhandled exception. System.IO.DirectoryNotFoundException: Could not find a part of the path 'D:\test_source'.`
-        // The reason is that it shouldn't be provided with non-existent directories.
-        // Solution: get rid of any direct/indirect calls to this `Add` method.
         public void Add(DirectoryInfo directory)
         {
-            // Maybe consider creating some kind of `Contract` out of these assertions (or maybe call it `Assert`, make a research on this one as well)
-            // like the `Contract` I saw in C# BCL source code.
-
             //if (!TrackList.Any())
             //    throw new NotImplementedException("Implement the Subscriber pattern and " +
             //        "declare 'I<something_related_to_managing_empty_track_lists_or_just_empty_lists_in_general>'");
-
-            if (!directory.Exists) throw new DirectoryNotFoundException($"The directory that doesn't exist must not be passed to this method: {directory}");
-
-            if (TrackList.Contains(directory.FullName))
-                throw new ArgumentException("Directories that are already tracked can not be added twice. Provide only validated elements");
 
             var topLevelSubdirectories = directory.EnumerateDirectories();
 

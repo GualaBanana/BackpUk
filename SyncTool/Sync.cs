@@ -16,12 +16,7 @@
             // I don't need to enumerate them with `SearchOption.AllDirectories`
             // as each directory that is tracked will be enumerated anyway.
             get
-            {
-                // Part of the contract I want to implement:
-                // It's actually the same as in `DirectoriesTracker.Add()` method. I think they both can be made more generic.
-                if (!AlreadyTracked.Any())
-                    throw new InvalidOperationException("Methods that require directories names from `TrackLisk` to function can not be called with the empty `TrackList`.");
-
+            {       
                 var currentFiles = new List<FileInfo>();
                 foreach (DirectoryInfo directory in _tracker.Directories)
                 {
@@ -53,13 +48,10 @@
         {
             get
             {
-                // `CurrentFiles` breaks in case `_tracker.TrackList` contains directories from another drive.
-                // Like if upon running the app user chose logic drive "C:\" but directories being tracked in
-                // `TrackList` are the ones from drive "D:\" so `_tracker.RelativeName` works improperly and
-                // call to `Path.GetRelativePath(RootDirectoryToTrack, fullPath)` results in the same `fullPath`
-                // as this method cuts off nothing because `RootDirectoryToTrack` is not the part of `fullPath`.
+                var currentFiles = CurrentFiles;
+                if (currentFiles == null) return new();
                 var currentFilesRelativeNames = CurrentFiles.Select(file => _tracker.RelativeName(file.FullName));
-
+                // No null-check is needed for `_cloud.RelativeFileNames`
                 var newFilesRelativeNames = currentFilesRelativeNames.Except(_cloud.RelativeFileNames);
                 return newFilesRelativeNames.Select(fileName => new FileInfo(_tracker.FullPathFromRelative(fileName))).ToList();
             }
@@ -96,7 +88,13 @@
         /// must not be called with this argument, as the method doesn't perform any checks itself.
         /// </remarks>
         /// <param name="directory">directory to add to the tracking system of the <see cref="Sync"/>.</param>
-        public void StartTracking(DirectoryInfo directory) => _tracker.Add(directory);
+        public void StartTracking(DirectoryInfo directory)
+        {
+            UsagePolicy.MustExist(directory);
+            UsagePolicy.MustBeNotTracked(directory, _tracker);
+
+            _tracker.Add(directory);
+        }
         /// <summary>
         /// <inheritdoc cref="StartTracking(DirectoryInfo)"/>.
         /// </summary>
@@ -104,13 +102,26 @@
         /// Should not be called with the <paramref name="directory"/> that is not tracked as it does nothing in this case.
         /// </remarks>
         /// <param name="directory">directory to remove from the tracking system of the <see cref="Sync"/>.</param>
-        public void StopTracking(DirectoryInfo directory) => _tracker.Remove(directory);
+        public void StopTracking(DirectoryInfo directory)
+        {
+            UsagePolicy.MustBeTracked(directory, _tracker);
+
+            _tracker.Remove(directory);
+        }
         // Make event that is raised when synchronization is completed. Fosho!
 
         // After I add the check for directories as well, need to update this method to take it into consideration.
         public void Synchronize()
         {
-            var newFiles = NewFiles;    // Cache while synchronizing.
+            var newFiles = NewFiles;
+            // Placeholder for calling some functions that will propose to start tracking some directories of the user because
+            // at this point nothing is being tracked, thus there is nothing to synchronize.
+            if (!AlreadyTracked.Any())
+            {
+                Console.WriteLine("None of your directeries are being synced.");
+                // Propose to start syncing something here.
+                return;
+            }
             // Placeholder indicator in case there are no new files to sync. Should be substituted with raising of the event later
             // when the event is ready. Maybe for now should consider using preprocessor directive to optionally compile foreach statement.
             if (!newFiles.Any())
