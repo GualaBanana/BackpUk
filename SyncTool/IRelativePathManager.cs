@@ -1,6 +1,6 @@
 ﻿namespace SyncTool
 {
-    public interface ISystemComponent
+    public interface IRelativePathManager
     {
         string FullPathFromRelative(string relativePath);
         string RelativeName(string fullPath);

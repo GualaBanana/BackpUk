@@ -3,7 +3,7 @@
     /// <summary>
     /// Manages the file in which the list of directories' names are stored.
     /// </summary>
-    public class DirectoriesTracker : ISystemComponent
+    public class DirectoriesTracker : IRelativePathManager
     {
         readonly TrackerConfig _config = new();
 
@@ -12,21 +12,8 @@
         public string FullPathFromRelative(string relativePath) => Path.Join(RootDirectoryToTrack, relativePath);
         public string RelativeName(string fullPath) => Path.GetRelativePath(RootDirectoryToTrack, fullPath);
 
-        public List<DirectoryInfo> Directories
-        {
-            get
-            {
-                var directories = new List<DirectoryInfo>();
-                foreach (string directoryName in TrackList)
-                {
-                    directories.Add(new(directoryName));
-                }
-                return directories;
-            }
-        }
-        // It's public because `Add` method requires arguments that were checked before passing them to `Add`.
-        // For users of the `Sync` to be able to check the arguments they provide, they need to have the list
-        // of already tracked directories, i.e. `ListedDirectories`.
+        public List<DirectoryInfo> Directories => 
+            TrackList.Select(trackedDirectory => new DirectoryInfo(trackedDirectory)).ToList();
         public List<string> TrackList
         {
             get
@@ -52,24 +39,11 @@
         // E.g. when a gallery app is opened on a phone, the gallery can subscribe to my event to perform
         // actions when my event is raised. This functionality is the responsiblity of the first if statement in this method for now.
         // This observer interface just must be an interface that will be called something like "IEmptyTrackListManager
-
-        // Sometimes, when I forget, this method throws:
-        //      `Unhandled exception. System.IO.DirectoryNotFoundException: Could not find a part of the path 'D:\test_source'.`
-        // The reason is that it shouldn't be provided with non-existent directories.
-        // Solution: get rid of any direct/indirect calls to this `Add` method.
         public void Add(DirectoryInfo directory)
         {
-            // Maybe consider creating some kind of `Contract` out of these assertions (or maybe call it `Assert`, make a research on this one as well)
-            // like the `Contract` I saw in C# BCL source code.
-
             //if (!TrackList.Any())
             //    throw new NotImplementedException("Implement the Subscriber pattern and " +
             //        "declare 'I<something_related_to_managing_empty_track_lists_or_just_empty_lists_in_general>'");
-
-            if (!directory.Exists) throw new DirectoryNotFoundException($"The directory that doesn't exist must not be passed to this method: {directory}");
-
-            if (TrackList.Contains(directory.FullName))
-                throw new ArgumentException("Directories that are already tracked can not be added twice. Provide only validated elements");
 
             var topLevelSubdirectories = directory.EnumerateDirectories();
 
