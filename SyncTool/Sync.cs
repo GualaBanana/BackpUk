@@ -9,7 +9,7 @@
         /// <see cref="List{T}"/> of directories' names that are already being tracked by the app.
         /// </summary>
         public List<string> AlreadyTracked => _tracker.TrackList;
-        List<FileInfo> CurrentFiles
+        List<string> CurrentFiles
         {
 
             // Enumerate all files in each tracked directory.
@@ -17,8 +17,11 @@
             // as each directory that is tracked will be enumerated anyway.
             get
             {       
-                var currentFiles = new List<FileInfo>();
-                foreach (DirectoryInfo directory in _tracker.Directories)
+                var currentFiles = new List<string>();
+                var trackedAndNewDirectories = _tracker.TrackList;
+                trackedAndNewDirectories.AddRange(NewDirectories);
+
+                foreach (string directory in trackedAndNewDirectories)
                 {
                     // Add options when dealing with the deleted directory that is still tracked by `track_list`:
                     //  - create the folder with this name from the list that refers to non-existent directory now
@@ -29,14 +32,14 @@
                     // and do remove this directory from the list.
                     try
                     {
-                        currentFiles.AddRange(directory.EnumerateFiles());
+                        currentFiles.AddRange(Directory.EnumerateFiles(directory));
                     }
                     catch (DirectoryNotFoundException exception)
                     {
                         var message = exception.Message;
                         var from = message.IndexOf('\'') + 1;
                         var length = message.LastIndexOf('\'') - from;    // It's always the ending quote.
-                        var deletedDirectory = new DirectoryInfo(message.Substring(from, length));
+                        var deletedDirectory = message.Substring(from, length);
 
                         _tracker.Remove(deletedDirectory);
                     }
@@ -44,19 +47,24 @@
                 return currentFiles;
             }
         }
-        List<FileInfo> NewFiles
+        List<string> NewFilesOnDrive
         {
             get
             {
-                var currentFiles = CurrentFiles;
-                if (currentFiles == null) return new();
-                var currentFilesRelativeNames = CurrentFiles.Select(file => _tracker.RelativeName(file.FullName));
-                // No null-check is needed for `_cloud.RelativeFileNames`
+                var currentFilesRelativeNames = CurrentFiles.Select(file => _tracker.RelativeName(file));
                 var newFilesRelativeNames = currentFilesRelativeNames.Except(_cloud.RelativeFileNames);
-                return newFilesRelativeNames.Select(fileName => new FileInfo(_tracker.FullPathFromRelative(fileName))).ToList();
+                return newFilesRelativeNames.Select(fileName => _tracker.FullPathFromRelative(fileName)).ToList();
             }
         }
-        List<DirectoryInfo> NewDirectories
+        List<string> NewFilesOnCloud
+        {
+            get
+            {
+                var newFilesRelativeNames = _cloud.RelativeFileNames.Except(CurrentFiles.Select(file => _tracker.RelativeName(file)));
+                return newFilesRelativeNames.Select(fileName => _cloud.FullPathFromRelative(fileName)).ToList();
+            }
+        }
+        List<string> NewDirectories
         {
             get
             {
@@ -66,13 +74,17 @@
                 string parent = _tracker.RootDirectoryToTrack;
                 foreach (string trackedDirectory in trackList)
                 {
+                    // Optimization that skips already enumerated directories.
                     if (parent.Contains(trackedDirectory)) continue;
 
                     parent = trackedDirectory;
-                    newDirectoriesList.AddRange(Directory.EnumerateDirectories(parent).Where(directory => !trackList.Contains(directory)));
+                    try
+                    {
+                        newDirectoriesList.AddRange(Directory.EnumerateDirectories(parent).Where(directory => !trackList.Contains(directory)));
+                    }
+                    catch (DirectoryNotFoundException) { }
                 }
-                if (!newDirectoriesList.Any()) Console.WriteLine("New directories are found");
-                return newDirectoriesList.Select(directory => new DirectoryInfo(directory)).ToList();
+                return newDirectoriesList;
             }
         }
 
@@ -86,7 +98,7 @@
         }
 
 
-        public void ShowNewFiles() => NewFiles.ForEach(file => Console.WriteLine(file.FullName));
+        public void ShowNewFiles() => NewFilesOnDrive.ForEach(file => Console.WriteLine(file));
 
 
         /// <summary>
@@ -97,7 +109,7 @@
         /// must not be called with this argument, as the method doesn't perform any checks itself.
         /// </remarks>
         /// <param name="directory">directory to add to the tracking system of the <see cref="Sync"/>.</param>
-        public void StartTracking(DirectoryInfo directory)
+        public void StartTracking(string directory)
         {
             UsagePolicy.MustExist(directory);
             UsagePolicy.MustBeNotTracked(directory, _tracker);
@@ -111,7 +123,7 @@
         /// Should not be called with the <paramref name="directory"/> that is not tracked as it does nothing in this case.
         /// </remarks>
         /// <param name="directory">directory to remove from the tracking system of the <see cref="Sync"/>.</param>
-        public void StopTracking(DirectoryInfo directory)
+        public void StopTracking(string directory)
         {
             UsagePolicy.MustBeTracked(directory, _tracker);
 
@@ -131,33 +143,37 @@
             }
             // Placeholder indicator in case there are no new files to sync. Should be substituted with raising of the event later
             // when the event is ready. Maybe for now should consider using preprocessor directive to optionally compile foreach statement.
-            if (!NewFiles.Any())
-            {
-                Console.WriteLine("All files are in sync.");
-                return;
-            }
+            //if (!NewFilesOnDrive.Any())
+            //{
+            //    Console.WriteLine("All files are in sync with the cloud.");
+            //    return;
+            //}
             SynchronizeDirectories();
-            SynchronizeFiles();
+            SynchronizeFiles(_tracker, _cloud);
         }
+        public void SynchronizeWithCloud() => SynchronizeFiles(_cloud, _tracker);
         void SynchronizeDirectories() => NewDirectories.ForEach(newDirectory => StartTracking(newDirectory));
-        void SynchronizeFiles()
+        // Maybe change source and destination to some kind of enum like `SearchOption` with two enum constants:
+        // FromCloud
+        // FromStorage
+        void SynchronizeFiles(IRelativePathManager source, IRelativePathManager destination)
         {
-            var newFiles = NewFiles;
+            var newFiles = source == _tracker ? NewFilesOnDrive : NewFilesOnCloud;
 
             foreach (var file in newFiles)
             {
                 // If the directory is a root, return value is null, as well.
                 string? fileParent;
-                if ((fileParent = Path.GetDirectoryName(file.FullName)) != null)
+                if ((fileParent = Path.GetDirectoryName(file)) != null)
                 {
-                    var relativeDirectoryName = _tracker.RelativeName(fileParent);
-                    var directoryPathOnCloud = _cloud.FullPathFromRelative(relativeDirectoryName);
-                    Directory.CreateDirectory(directoryPathOnCloud);
+                    var sourceRelativeDirectoryName = source.RelativeName(fileParent);
+                    var destinationDirectoryPath = destination.FullPathFromRelative(sourceRelativeDirectoryName);
+                    Directory.CreateDirectory(destinationDirectoryPath);
                 }
 
-                var fileRelativeName = _tracker.RelativeName(file.FullName);
-                var filePathOnCloud = _cloud.FullPathFromRelative(fileRelativeName);
-                file.CopyTo(filePathOnCloud);
+                var sourceRelativeName = source.RelativeName(file);
+                var destinationFilePath = destination.FullPathFromRelative(sourceRelativeName);
+                File.Copy(file, destinationFilePath);
             }
         }
     }

@@ -2,19 +2,19 @@
 {
     public static class UsagePolicy
     {
-        static public void MustBeTracked(DirectoryInfo directory, DirectoriesTracker tracker)
+        static public void MustBeTracked(string directory, DirectoriesTracker tracker)
         {
-            if (!tracker.TrackList.Contains(directory.FullName))
+            if (!tracker.TrackList.Contains(directory))
                 throw new ArgumentException("The directory needs to be currently tracked to be removed.");
         }
-        static public void MustBeNotTracked(DirectoryInfo directory, DirectoriesTracker tracker)
+        static public void MustBeNotTracked(string directory, DirectoriesTracker tracker)
         {
-            if (tracker.TrackList.Contains(directory.FullName))
+            if (tracker.TrackList.Contains(directory))
                 throw new ArgumentException("Directories that are already tracked can not be added twice. Provide only validated elements");
         }
-        static public void MustExist(DirectoryInfo directory)
+        static public void MustExist(string directory)
         {
-            if (!directory.Exists) 
+            if (!Directory.Exists(directory)) 
                 throw new DirectoryNotFoundException($"The directory that doesn't exist must not be passed to this method: {directory}");
         }
     }
