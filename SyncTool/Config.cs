@@ -30,22 +30,16 @@
 
         protected abstract string ComponentName { get; }
         public string ComponentLocationPath => Path.Join(InstallationPath, ComponentName);
-        /// <summary>
-        /// Initializes derived types of <see cref="FileSystemInfo"/> in children config classes.
-        /// </summary>
-        public abstract FileSystemInfo FileSystemInfoObject { get; }
     }
 
     public class CloudConfig : Config
     {
         protected override string ComponentName { get; } = "$cloud";
-        public override DirectoryInfo FileSystemInfoObject => new(ComponentLocationPath);
     }
 
     public class TrackerConfig : Config
     {
         protected override string ComponentName { get; } = "track_list";
-        public override FileInfo FileSystemInfoObject => new(ComponentLocationPath);
 
 
         public TrackerConfig()

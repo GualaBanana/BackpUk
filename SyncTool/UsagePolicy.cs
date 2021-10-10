@@ -2,12 +2,12 @@
 {
     public static class UsagePolicy
     {
-        static public void MustBeTracked(string directory, DirectoriesTracker tracker)
+        static public void MustBeTracked(string directory, Tracker tracker)
         {
             if (!tracker.TrackList.Contains(directory))
                 throw new ArgumentException("The directory needs to be currently tracked to be removed.");
         }
-        static public void MustBeNotTracked(string directory, DirectoriesTracker tracker)
+        static public void MustBeNotTracked(string directory, Tracker tracker)
         {
             if (tracker.TrackList.Contains(directory))
                 throw new ArgumentException("Directories that are already tracked can not be added twice. Provide only validated elements");

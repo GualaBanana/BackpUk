@@ -3,12 +3,9 @@
     /// <summary>
     /// Manages the file in which the list of directories' names are stored.
     /// </summary>
-    public class DirectoriesTracker : IRelativePathManager
+    public class Tracker : IRelativePathManager
     {
         readonly TrackerConfig _config = new();
-
-        public string FullPathFromRelative(string relativePath) => Path.Join(RootDirectoryToTrack, relativePath);
-        public string RelativeName(string fullPath) => Path.GetRelativePath(RootDirectoryToTrack, fullPath);
 
         public string RootDirectoryToTrack { get; } = @"D:\";  // Config.AskToChooseLogicalDrive();
         public List<string> TrackList
@@ -22,6 +19,44 @@
                 return trackListFileContents;
             }
         }
+        public List<string> NewDirectories
+        {
+            get
+            {
+                var trackList = TrackList;
+                List<string> newDirectoriesList = new();
+
+                string directoryToSearch = RootDirectoryToTrack;
+                foreach (string trackedDirectory in trackList)
+                {
+                    // Optimization that skips already enumerated directories.
+                    if (directoryToSearch.Contains(trackedDirectory)) continue;
+
+                    directoryToSearch = trackedDirectory;
+                    if (Directory.Exists(directoryToSearch)) newDirectoriesList.AddRange(Directory.EnumerateDirectories(directoryToSearch)
+                                                                               .Where(directory => !trackList.Contains(directory)));
+                }
+                return newDirectoriesList;
+            }
+        }
+        public List<string> RelativeFileNames
+        {
+            get
+            {
+                var fileNames = new List<string>();
+                foreach (string directory in TrackList)
+                {
+                    if (Directory.Exists(directory))
+                        fileNames.AddRange(Directory.EnumerateFiles(directory));
+                }
+                return fileNames.Select(file => RelativeName(file)).ToList();
+            }
+        }
+
+        public string FullPathFromRelative(string relativePath) => Path.Join(RootDirectoryToTrack, relativePath);
+        public string RelativeName(string fullPath) => Path.GetRelativePath(RootDirectoryToTrack, fullPath);
+
+
         public void Add(string directory)
         {
             var subDirectories = Directory.EnumerateDirectories(directory, "*", SearchOption.AllDirectories);
@@ -30,15 +65,6 @@
             writer.WriteLine(directory);
             foreach (var subDirectory in subDirectories) writer.WriteLine(subDirectory);
         }
-        /// <summary>
-        /// Removes provided directory from the list of tracked directories.
-        /// </summary>
-        /// <remarks>
-        /// By default, removes only <paramref name="directory"/>, this behaviour can be changed with <paramref name="recursively"/> flag.<br/>
-        /// Calling with <paramref name="directory"/> that is not tracked (shouldn't be done) already does nothing.
-        /// </remarks>
-        /// <param name="directory">the directory to remove from list of tracked directories.</param>
-        /// <param name="recursively">if <c>true</c> than removes children directories of the <paramref name="directory"/>, <c>false</c>otherwise.</param>
         public void Remove(string directory)
         {
             var modifiedTrackList = TrackList;
