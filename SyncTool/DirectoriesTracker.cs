@@ -22,28 +22,14 @@
                 return trackListFileContents;
             }
         }
-        // TODO:
-        // Add the event for the empty `TrackList` that is raised when no directories are tracked yet.
-        // Users will be able to declare their own subscribers that will execute only when they are subscribed to my event.
-        // E.g. when a gallery app is opened on a phone, the gallery can subscribe to my event to perform
-        // actions when my event is raised. This functionality is the responsiblity of the first if statement in this method for now.
-        // This observer interface just must be an interface that will be called something like "IEmptyTrackListManager
         public void Add(string directory)
         {
-            //if (!TrackList.Any())
-            //    throw new NotImplementedException("Implement the Subscriber pattern and " +
-            //        "declare 'I<something_related_to_managing_empty_track_lists_or_just_empty_lists_in_general>'");
+            var subDirectories = Directory.EnumerateDirectories(directory, "*", SearchOption.AllDirectories);
 
-            var topLevelSubdirectories = Directory.EnumerateDirectories(directory);
-
-            using (var writer = new StreamWriter(_config.ComponentLocationPath, append: true))
-            {
-                writer.WriteLine(directory);
-            }
-            foreach (var dir in topLevelSubdirectories) Add(dir);
+            using var writer = new StreamWriter(_config.ComponentLocationPath, append: true);
+            writer.WriteLine(directory);
+            foreach (var subDirectory in subDirectories) writer.WriteLine(subDirectory);
         }
-        // At this moment implementation of `Add` and `Remove` differ. `Add` adds folders recursively
-        // calling itself, but `Remove` can do the same but using a flag. So far it doesn't complicate anything.
         /// <summary>
         /// Removes provided directory from the list of tracked directories.
         /// </summary>
@@ -53,27 +39,16 @@
         /// </remarks>
         /// <param name="directory">the directory to remove from list of tracked directories.</param>
         /// <param name="recursively">if <c>true</c> than removes children directories of the <paramref name="directory"/>, <c>false</c>otherwise.</param>
-        public void Remove(string directory, bool recursively = false)
+        public void Remove(string directory)
         {
-            var modifiedDirectoriesList = TrackList;
-            modifiedDirectoriesList.Remove(directory);
-            if (recursively)
-            {
-                var allSubdirectories = Directory.EnumerateDirectories(directory, "*", SearchOption.AllDirectories);
-                foreach (var dir in allSubdirectories)
-                {
-                    modifiedDirectoriesList.Remove(dir);
-                }
-            }
-            using var writer = new StreamWriter(_config.ComponentLocationPath);
-            modifiedDirectoriesList.ForEach(dir => writer.WriteLine(dir));
-        }
+            var modifiedTrackList = TrackList;
+            modifiedTrackList.Remove(directory);
 
-        [Obsolete("Instantiates StreamWriter on each call so is not efficient in loops, thus not used, yet.")]
-        private void WriteToTrackingFile(string content, bool append)
-        {
-            using var writer = new StreamWriter(_config.ComponentLocationPath, append);
-            writer.WriteLine(content);
+            var subDirectories = Directory.EnumerateDirectories(directory, "*", SearchOption.AllDirectories);
+            foreach (var subDirectory in subDirectories) modifiedTrackList.Remove(subDirectory);
+
+            using var writer = new StreamWriter(_config.ComponentLocationPath);
+            modifiedTrackList.ForEach(dir => writer.WriteLine(dir));
         }
     }
 }
