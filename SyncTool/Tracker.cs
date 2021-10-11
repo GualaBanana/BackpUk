@@ -7,7 +7,7 @@
     {
         readonly TrackerConfig _config = new();
 
-        public string RootDirectoryToTrack { get; } = @"D:\";  // Config.AskToChooseLogicalDrive();
+        public static string RootDirectoryToTrack { get; } = @"D:\";  // Config.AskToChooseLogicalDrive();
         public List<string> TrackList
         {
             get

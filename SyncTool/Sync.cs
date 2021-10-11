@@ -19,6 +19,7 @@
 
         public void StartTracking(string directory)
         {
+            UsagePolicy.MustBeOnRightDrive(directory);
             UsagePolicy.MustExist(directory);
             UsagePolicy.MustBeNotTracked(directory, _tracker);
 
@@ -37,7 +38,13 @@
             SynchronizeFiles(source: _tracker, destination: _cloud);
         }
         public void SynchronizeWithCloud() => SynchronizeFiles(_cloud, _tracker);
-        void SynchronizeDirectories() => _tracker.NewDirectories.ForEach(newDirectory => StartTracking(newDirectory));
+        void SynchronizeDirectories()
+        {
+            _tracker.NewDirectories.ForEach(directory => StartTracking(directory));
+
+            foreach (var directory in _tracker.TrackList.Select(directory => _tracker.RelativeName(directory)))
+                Directory.CreateDirectory(_cloud.FullPathFromRelative(directory));
+        }
         static void SynchronizeFiles(IRelativePathManager source, IRelativePathManager destination)
         {
             var newFiles = source.RelativeFileNames.Except(destination.RelativeFileNames);
