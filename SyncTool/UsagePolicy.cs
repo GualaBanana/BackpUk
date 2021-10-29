@@ -19,8 +19,7 @@
         }
         public static void MustBeOnRightDrive(string directory)
         {
-            string root;
-            if ((root = Directory.GetDirectoryRoot(directory)) != Tracker.RootDirectoryToTrack)
+            if (Directory.GetDirectoryRoot(directory) != Tracker.RootDirectoryToTrack)
                 throw new ArgumentException($"The provided directory must be on the tracked drive - {Tracker.RootDirectoryToTrack}.", nameof(directory));
         }
     }

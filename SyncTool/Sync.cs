@@ -5,8 +5,8 @@
         readonly Cloud _cloud;
         readonly Tracker _tracker;
 
-        public List<string> AlreadyTracked => _tracker.TrackList;
-        static int NewSyncEntries { get; set; } = 0;
+        public List<string> TrackedDirectories => _tracker.TrackList;
+        static int JustSyncedItemsCount { get; set; } = 0;
 
 
         public Sync()
@@ -32,51 +32,57 @@
 
             _tracker.Remove(directory);
         }
-        // Make event that is raised when synchronization is completed. Fosho!
         public void Synchronize()
         {
-            NewSyncEntries = 0;
+            JustSyncedItemsCount = 0;
+
             SynchronizeDirectories();
             SynchronizeFiles(source: _tracker, destination: _cloud);
 
-            if (NewSyncEntries > 0) OnSyncCompletion?.Invoke("Synchronization completed.", NewSyncEntries);
+            if (JustSyncedItemsCount > 0) OnSyncCompletion?.Invoke("Synchronization completed.", JustSyncedItemsCount);
         }
         public void SynchronizeWithCloud() => SynchronizeFiles(_cloud, _tracker);
         void SynchronizeDirectories()
         {
             var newDirectories = _tracker.NewDirectories;
 
-            if (!newDirectories.Any()) return;
-            NewSyncEntries += newDirectories.Count;
-
             newDirectories.ForEach(directory => StartTracking(directory));
-
+            // Do not return from this method prematurely as the following line of code needs to create all tracked directories.
             foreach (var directory in _tracker.TrackList.Select(directory => _tracker.RelativeName(directory)))
-                Directory.CreateDirectory(_cloud.FullPathFromRelative(directory));
+            {
+                var directoryFullNameOnCloud = _cloud.FullNameFromRelative(directory);
+
+                if (!Directory.Exists(directoryFullNameOnCloud))
+                {
+                    Directory.CreateDirectory(directoryFullNameOnCloud);
+                    JustSyncedItemsCount++;
+                }
+            }
         }
         static void SynchronizeFiles(IRelativePathManager source, IRelativePathManager destination)
         {
             var newFiles = source.RelativeFileNames.Except(destination.RelativeFileNames);
 
             if (!newFiles.Any()) return;
-            NewSyncEntries += newFiles.Count();
 
             foreach (string file in newFiles)
             {
                 string? fileLocation;
                 if ((fileLocation = Path.GetDirectoryName(file)) != null)
                 {
-                    string destinationDirectory = destination.FullPathFromRelative(fileLocation);
+                    string destinationDirectory = destination.FullNameFromRelative(fileLocation);
                     Directory.CreateDirectory(destinationDirectory);
                 }
 
                 if (!File.Exists(file))
                 {
-                    string from = source.FullPathFromRelative(file);
-                    string to = destination.FullPathFromRelative(file);
+                    string from = source.FullNameFromRelative(file);
+                    string to = destination.FullNameFromRelative(file);
                     File.Copy(from, to);
                 }
             }
+
+            JustSyncedItemsCount += newFiles.Count();
         }
 
 

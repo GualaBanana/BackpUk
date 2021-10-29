@@ -19,6 +19,9 @@
                 return trackListFileContents;
             }
         }
+        /// <summary>
+        /// List of paths of new nested directories inside already tracked directories.
+        /// </summary>
         public List<string> NewDirectories
         {
             get
@@ -53,7 +56,7 @@
             }
         }
 
-        public string FullPathFromRelative(string relativePath) => Path.Join(RootDirectoryToTrack, relativePath);
+        public string FullNameFromRelative(string relativePath) => Path.Join(RootDirectoryToTrack, relativePath);
         public string RelativeName(string fullPath) => Path.GetRelativePath(RootDirectoryToTrack, fullPath);
 
 

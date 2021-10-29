@@ -35,6 +35,7 @@
     public class CloudConfig : Config
     {
         protected override string ComponentName { get; } = "$cloud";
+        public new string ComponentLocationPath => Path.Join(@"E:\", ComponentName);
     }
 
     public class TrackerConfig : Config

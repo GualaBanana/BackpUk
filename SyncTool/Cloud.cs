@@ -8,7 +8,7 @@
             Directory.EnumerateFiles(_config.ComponentLocationPath, "*", SearchOption.AllDirectories)
             .Select(file => RelativeName(file))
             .ToList();
-        public string FullPathFromRelative(string relativePath) => Path.Join(_config.ComponentLocationPath, relativePath);
+        public string FullNameFromRelative(string relativePath) => Path.Join(_config.ComponentLocationPath, relativePath);
         public string RelativeName(string fullPath) => Path.GetRelativePath(_config.ComponentLocationPath, fullPath);
 
 
