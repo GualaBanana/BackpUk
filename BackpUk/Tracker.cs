@@ -26,7 +26,7 @@
             }
         }
         /// <summary>
-        /// List of paths of new nested directories inside already tracked directories.
+        /// List of full names of new nested directories inside already tracked directories.
         /// </summary>
         public List<string> NewDirectories
         {

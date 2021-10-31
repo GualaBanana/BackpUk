@@ -39,11 +39,25 @@
             PackDirectories();
             PackFiles(source: _tracker, destination: _backpUk);
 
-            if (PackedItemsCount > 0) PackingCompleted?.Invoke(null, PackedItemsCount);
+            if (PackedItemsCount == 0)
+            {
+                Console.WriteLine("All items are already packed.");
+                return;
+            }
+
+            PackingCompleted?.Invoke(null, PackedItemsCount);
         }
         public void FetchFromBackpUk()
         {
+            PackedItemsCount = 0;
+
             PackFiles(source: _backpUk, destination: _tracker);
+            if (PackedItemsCount == 0)
+            {
+                Console.WriteLine("All items are already packed.");
+                return;
+            }
+
             UnpackingCompleted?.Invoke(null, PackedItemsCount);
         }
 
@@ -52,7 +66,7 @@
             var newNestedDirectories = _tracker.NewDirectories;
 
             newNestedDirectories.ForEach(directoryName => StartTracking(directoryName));
-            // Do not return from this method prematurely as the following line of code needs to create all tracked directories.
+            // Do not return from this method prematurely as the following block of code needs to create all tracked directories.
             foreach (var directoryName in _tracker.TrackList.Select(directory => _tracker.RelativeName(directory)))
             {
                 var directoryFullNameInBackpUk = _backpUk.FullNameFromRelative(directoryName);
@@ -66,28 +80,24 @@
         }
         static void PackFiles(IRelativePathManager source, IRelativePathManager destination)
         {
-            var newFiles = source.RelativeFileNames.Except(destination.RelativeFileNames);
+            var sourceFiles = source.RelativeFileNames;
 
-            if (!newFiles.Any()) return;
-
-            foreach (string fileName in newFiles)
+            foreach (string fileName in sourceFiles)
             {
-                string? fileLocation;
-                if ((fileLocation = Path.GetDirectoryName(fileName)) != null)
-                {
-                    string destinationDirectory = destination.FullNameFromRelative(fileLocation);
-                    Directory.CreateDirectory(destinationDirectory);
-                }
+                string from, to;
 
-                if (!File.Exists(fileName))
+                if (File.Exists(to = destination.FullNameFromRelative(fileName))) continue;
+                from = source.FullNameFromRelative(fileName);
+
+                string? fileParentsDirectories;
+                if ((fileParentsDirectories = Path.GetDirectoryName(fileName)) != null)
                 {
-                    string from = source.FullNameFromRelative(fileName);
-                    string to = destination.FullNameFromRelative(fileName);
-                    File.Copy(from, to);
+                    Directory.CreateDirectory(destination.FullNameFromRelative(fileParentsDirectories));
                 }
+                
+                File.Copy(from, to);
+                PackedItemsCount++;
             }
-
-            PackedItemsCount += newFiles.Count();
         }
 
 
