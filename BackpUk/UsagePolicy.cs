@@ -1,4 +1,4 @@
-﻿namespace SyncTool
+﻿namespace BackpUk
 {
     public static class UsagePolicy
     {

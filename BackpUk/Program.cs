@@ -1,4 +1,4 @@
-﻿using SyncTool;
+﻿using BackpUk;
 
 // TODO:
 // Add the event for the empty `TrackList` that is raised when no directories are tracked yet.
@@ -8,11 +8,12 @@
 // This observer interface just must be an interface that will be called something like "IEmptyTrackListManager
 
 // Write tests.
-EventHandler<int> syncHandler = (sender, newSyncEntries) => Console.WriteLine($"{newSyncEntries} new entries successfully synchronized.");
+EventHandler<int> packHandler = (sender, packedEntriesCount) => Console.WriteLine($"{packedEntriesCount} new entries successfully packed.");
+EventHandler<int> unpackHandler = (sender, unpackedEntriesCount) => Console.WriteLine($"{unpackedEntriesCount} new entries successfully unpacked.");
 
 string sourceFolderName = @"D:\test_source";
-Sync syncTool = new();
-syncTool.SyncCompleted += syncHandler;
-//syncTool.StartTracking(sourceFolderName);
-syncTool.SynchronizeWithCloud();
-//syncTool.Synchronize();
+var backpuker = new BackpUker();
+backpuker.PackingCompleted += packHandler;
+//backpuk.StartTracking(sourceFolderName);
+backpuker.FetchFromBackpUk();
+backpuker.PutInBackpUk();

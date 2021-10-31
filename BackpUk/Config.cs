@@ -1,19 +1,12 @@
-﻿namespace SyncTool
+﻿namespace BackpUk
 {
-    /// <summary>
-    /// Abstract base class for providing configs to different parts of the system.
-    /// </summary>
-    /// <remarks>
-    /// Provides an easy pluggable functionality by being an abstract class for every concrete <see cref="Config"/><br/>
-    /// each of which is responsible for a distinct part of the <see cref="Sync"/> internal mechanism.<br/>
-    /// </remarks>
-    public abstract class Config
+    public static class Config
     {
         static string DirectoryName
         {
             get
             {
-                if (OperatingSystem.IsWindows()) return ".synctool";
+                if (OperatingSystem.IsWindows()) return ".backpuk";
                 throw new ArgumentException($"The AppRootDirectoryName is undetermined for the current operating system.", nameof(Environment.OSVersion));
             }
         }
@@ -26,26 +19,7 @@
                 throw new ArgumentException("The InstallationPath is undetermined for the current operating system.", nameof(Environment.OSVersion));
             }
         }
-
-
-        protected abstract string ComponentName { get; }
-        public string ComponentLocationPath => Path.Join(InstallationPath, ComponentName);
-    }
-
-    public class CloudConfig : Config
-    {
-        protected override string ComponentName { get; } = "$cloud";
-        public new string ComponentLocationPath => Path.Join(@"E:\", ComponentName);
-    }
-
-    public class TrackerConfig : Config
-    {
-        protected override string ComponentName { get; } = "track_list";
-
-
-        public TrackerConfig()
-        {
-            using var _ = File.AppendText(ComponentLocationPath);
-        }
+        public static string BackpUkLocation { get; } = Path.Join(@"E:\", "$backpuk");
+        public static string TrackerFileLocation { get; } = Path.Join(InstallationPath, "track_list"); 
     }
 }

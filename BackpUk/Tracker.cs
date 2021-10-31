@@ -1,21 +1,27 @@
-﻿namespace SyncTool
+﻿namespace BackpUk
 {
     /// <summary>
     /// Manages the file in which the list of directories' names are stored.
     /// </summary>
     public class Tracker : IRelativePathManager
     {
-        TrackerConfig _config { get; } = new();
+        FileInfo _trackerFile { get; }
+
+        public Tracker()
+        {
+            _trackerFile = new(Config.TrackerFileLocation);
+            using var _ = _trackerFile.AppendText();
+        }
 
         public static string RootDirectoryToTrack { get; } = @"D:\";  // Config.AskToChooseLogicalDrive();
         public List<string> TrackList
         {
             get
             {
-                using var reader = new StreamReader(_config.ComponentLocationPath);
+                using var reader = _trackerFile.OpenText();
                 var trackListFileContents = new List<string>();
                 string? line;
-                while ((line = reader.ReadLine()) != null && line != String.Empty) trackListFileContents.Add(line);
+                while ((line = reader.ReadLine()) != null && line != string.Empty) trackListFileContents.Add(line);
                 return trackListFileContents;
             }
         }
@@ -52,7 +58,7 @@
                     if (Directory.Exists(directoryName))
                         fileNames.AddRange(Directory.EnumerateFiles(directoryName));
                 }
-                return fileNames.Select(file => RelativeName(file)).ToList();
+                return fileNames.Select(fileName => RelativeName(fileName)).ToList();
             }
         }
 
@@ -64,7 +70,7 @@
         {
             var subDirectories = Directory.EnumerateDirectories(directoryName, "*", SearchOption.AllDirectories);
 
-            using var writer = new StreamWriter(_config.ComponentLocationPath, append: true);
+            using var writer = _trackerFile.AppendText();
             writer.WriteLine(directoryName);
             foreach (var subDirectory in subDirectories) writer.WriteLine(subDirectory);
         }
@@ -76,8 +82,8 @@
             var subDirectories = Directory.EnumerateDirectories(directoryName, "*", SearchOption.AllDirectories);
             foreach (var subDirectory in subDirectories) modifiedTrackList.Remove(subDirectory);
 
-            using var writer = new StreamWriter(_config.ComponentLocationPath);
-            modifiedTrackList.ForEach(dir => writer.WriteLine(dir));
+            using var writer = _trackerFile.AppendText();
+            modifiedTrackList.ForEach(dirName => writer.WriteLine(dirName));
         }
     }
 }
