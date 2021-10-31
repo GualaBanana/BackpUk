@@ -5,7 +5,7 @@
     /// </summary>
     public class Tracker : IRelativePathManager
     {
-        readonly TrackerConfig _config = new();
+        TrackerConfig _config { get; } = new();
 
         public static string RootDirectoryToTrack { get; } = @"D:\";  // Config.AskToChooseLogicalDrive();
         public List<string> TrackList
@@ -30,14 +30,14 @@
                 List<string> newDirectoriesList = new();
 
                 string directoryToSearch = RootDirectoryToTrack;
-                foreach (string trackedDirectory in trackList)
+                foreach (string trackedDirectoryName in trackList)
                 {
                     // Optimization that skips already enumerated directories.
-                    if (directoryToSearch.Contains(trackedDirectory)) continue;
+                    if (directoryToSearch.Contains(trackedDirectoryName)) continue;
 
-                    directoryToSearch = trackedDirectory;
+                    directoryToSearch = trackedDirectoryName;
                     if (Directory.Exists(directoryToSearch)) newDirectoriesList.AddRange(Directory.EnumerateDirectories(directoryToSearch)
-                                                                               .Where(directory => !trackList.Contains(directory)));
+                                                                               .Where(directoryName => !trackList.Contains(directoryName)));
                 }
                 return newDirectoriesList;
             }
@@ -47,10 +47,10 @@
             get
             {
                 var fileNames = new List<string>();
-                foreach (string directory in TrackList)
+                foreach (string directoryName in TrackList)
                 {
-                    if (Directory.Exists(directory))
-                        fileNames.AddRange(Directory.EnumerateFiles(directory));
+                    if (Directory.Exists(directoryName))
+                        fileNames.AddRange(Directory.EnumerateFiles(directoryName));
                 }
                 return fileNames.Select(file => RelativeName(file)).ToList();
             }
@@ -60,20 +60,20 @@
         public string RelativeName(string fullPath) => Path.GetRelativePath(RootDirectoryToTrack, fullPath);
 
 
-        public void Add(string directory)
+        public void Add(string directoryName)
         {
-            var subDirectories = Directory.EnumerateDirectories(directory, "*", SearchOption.AllDirectories);
+            var subDirectories = Directory.EnumerateDirectories(directoryName, "*", SearchOption.AllDirectories);
 
             using var writer = new StreamWriter(_config.ComponentLocationPath, append: true);
-            writer.WriteLine(directory);
+            writer.WriteLine(directoryName);
             foreach (var subDirectory in subDirectories) writer.WriteLine(subDirectory);
         }
-        public void Remove(string directory)
+        public void Remove(string directoryName)
         {
             var modifiedTrackList = TrackList;
-            modifiedTrackList.Remove(directory);
+            modifiedTrackList.Remove(directoryName);
 
-            var subDirectories = Directory.EnumerateDirectories(directory, "*", SearchOption.AllDirectories);
+            var subDirectories = Directory.EnumerateDirectories(directoryName, "*", SearchOption.AllDirectories);
             foreach (var subDirectory in subDirectories) modifiedTrackList.Remove(subDirectory);
 
             using var writer = new StreamWriter(_config.ComponentLocationPath);

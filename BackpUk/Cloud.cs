@@ -2,7 +2,8 @@
 {
     public class Cloud : IRelativePathManager
     {
-        readonly CloudConfig _config = new();
+        CloudConfig _config { get; } = new();
+        StorageSpaceTracker _storageSpaceTracker { get; }
 
         public List<string> RelativeFileNames => 
             Directory.EnumerateFiles(_config.ComponentLocationPath, "*", SearchOption.AllDirectories)
@@ -12,6 +13,10 @@
         public string RelativeName(string fullPath) => Path.GetRelativePath(_config.ComponentLocationPath, fullPath);
 
 
-        public Cloud() => Directory.CreateDirectory(_config.ComponentLocationPath);
+        public Cloud()
+        {
+            Directory.CreateDirectory(_config.ComponentLocationPath);
+            _storageSpaceTracker = new(_config.ComponentLocationPath);
+        }
     }
 }

@@ -2,8 +2,8 @@
 {
     class Sync
     {
-        readonly Cloud _cloud;
-        readonly Tracker _tracker;
+        Cloud _cloud { get; }
+        Tracker _tracker { get; }
 
         public List<string> TrackedDirectories => _tracker.TrackList;
         static int JustSyncedItemsCount { get; set; } = 0;
@@ -39,14 +39,14 @@
             SynchronizeDirectories();
             SynchronizeFiles(source: _tracker, destination: _cloud);
 
-            if (JustSyncedItemsCount > 0) OnSyncCompletion?.Invoke("Synchronization completed.", JustSyncedItemsCount);
+            if (JustSyncedItemsCount > 0) SyncCompleted?.Invoke("Synchronization completed.", JustSyncedItemsCount);
         }
         public void SynchronizeWithCloud() => SynchronizeFiles(_cloud, _tracker);
         void SynchronizeDirectories()
         {
-            var newDirectories = _tracker.NewDirectories;
+            var newNestedDirectories = _tracker.NewDirectories;
 
-            newDirectories.ForEach(directory => StartTracking(directory));
+            newNestedDirectories.ForEach(directory => StartTracking(directory));
             // Do not return from this method prematurely as the following line of code needs to create all tracked directories.
             foreach (var directory in _tracker.TrackList.Select(directory => _tracker.RelativeName(directory)))
             {
@@ -86,6 +86,6 @@
         }
 
 
-        public event EventHandler<int>? OnSyncCompletion;
+        public event EventHandler<int>? SyncCompleted;
     }
 }
