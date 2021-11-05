@@ -1,0 +1,38 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31825.309
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BackpUk", "BackpUk\BackpUk.csproj", "{32D9DEED-ECF9-4A14-B8A3-94D18A424FD4}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Config", "Config\Config.shproj", "{A4EF145E-1DA8-4A7F-90E7-8880910A4728}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Installer", "Installer\Installer.csproj", "{BE38BCCF-AAE4-4BA3-A9D0-137D87446881}"
+EndProject
+Global
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		Config\Config.projitems*{32d9deed-ecf9-4a14-b8a3-94d18a424fd4}*SharedItemsImports = 5
+		Config\Config.projitems*{a4ef145e-1da8-4a7f-90e7-8880910a4728}*SharedItemsImports = 13
+		Config\Config.projitems*{be38bccf-aae4-4ba3-a9d0-137d87446881}*SharedItemsImports = 5
+	EndGlobalSection
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{32D9DEED-ECF9-4A14-B8A3-94D18A424FD4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{32D9DEED-ECF9-4A14-B8A3-94D18A424FD4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{32D9DEED-ECF9-4A14-B8A3-94D18A424FD4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{32D9DEED-ECF9-4A14-B8A3-94D18A424FD4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BE38BCCF-AAE4-4BA3-A9D0-137D87446881}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BE38BCCF-AAE4-4BA3-A9D0-137D87446881}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BE38BCCF-AAE4-4BA3-A9D0-137D87446881}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BE38BCCF-AAE4-4BA3-A9D0-137D87446881}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {23A1F031-C15A-4169-BB45-EEE4CFBE10B7}
+	EndGlobalSection
+EndGlobal
