@@ -1,5 +1,6 @@
 ﻿namespace BackpUk
 {
+    // Always valid static app-specific information.
     public static class Config
     {
         public const string AppName = "BackpUk";
