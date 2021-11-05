@@ -6,7 +6,6 @@
     public class UserPreferences
     {
         public UserPreferences() { }
-        // Consider adding the option to change the name of the backup directory.
         string BackpUkDirectoryName { get; } = "$backpuk";
         public string? PathToBackpUkDirectory
         {

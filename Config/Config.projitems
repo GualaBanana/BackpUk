@@ -9,7 +9,8 @@
     <Import_RootNamespace>Config</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="$(MSBuildThisFileDirectory)UserPreferences.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)UserSettingsJsonModel.cs" />
+    <Compile Include="..\Config\UserSettingsManager.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Config.cs" />
   </ItemGroup>
 </Project>

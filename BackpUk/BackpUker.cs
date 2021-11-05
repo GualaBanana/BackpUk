@@ -5,19 +5,29 @@
         BackpUk _backpUk { get; }
         Tracker _tracker { get; }
 
+        static bool IsFirstLaunch => File.ReadAllBytes(Config.UserSettingsFileLocation).Length == 0;
+
         public List<string> TrackedDirectories => _tracker.TrackList;
         static int PackedItemsCount { get; set; } = 0;
 
 
         public BackpUker()
         {
-            // This creation of the directory should be done by the installer, I guess, and here or in Config I need to check
+            // I need to check
             // if this directory actually exists to determine whether the app can be run. Otherwise, some kind of message
             // about app files corruption should be shown to the user. And maybe some options like to reinstall it. But I need
             // to think about whether it should be done here or in Config class or rather even in some other class
             // like AppFilesValidator whose sole purpose will be to check if all the files needed to for running the app are valid
             // and not corrupted or deleted which will be run in Program.cs every time the app starts.
 
+            if (IsFirstLaunch)
+            {
+                // This bullshit right here needs to be fixed because this is such a fucking crap that I have no word to describe how bad it is.
+                UserSettingsManager.BackpUkPath = @"D:\";
+                UserSettingsManager.Singleton.Save();
+            }
+            // User settings are always loaded, but if it is the first launch, new empty UserSettingsJsonModel created first with the backup storage provided by the user.
+            UserSettingsManager.Singleton.Load();
             // Dictates the order of components' initialization.
             _backpUk = new();
             _tracker = new();
