@@ -11,8 +11,14 @@
 
         public BackpUker()
         {
+            // This creation of the directory should be done by the installer, I guess, and here or in Config I need to check
+            // if this directory actually exists to determine whether the app can be run. Otherwise, some kind of message
+            // about app files corruption should be shown to the user. And maybe some options like to reinstall it. But I need
+            // to think about whether it should be done here or in Config class or rather even in some other class
+            // like AppFilesValidator whose sole purpose will be to check if all the files needed to for running the app are valid
+            // and not corrupted or deleted which will be run in Program.cs every time the app starts.
+
             // Dictates the order of components' initialization.
-            Directory.CreateDirectory(Config.InstallationPath);
             _backpUk = new();
             _tracker = new();
         }
